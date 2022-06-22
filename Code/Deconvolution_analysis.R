@@ -14,6 +14,8 @@ set_cibersort_mat("G:/UHN/CIBERSORT/LM22.txt")
 pset_folder<-"G:/UHN/psets"
 
 PDX_exprs<-readRDS('../Data/PDXE_microArray.rds')
+metadata<-pData(PDX_exprs)
+
 breast_pdxs<-metadata[metadata$tumor.type=="breast",]$biobase.id
 exprs_data<-exprs(PDX_exprs)[,breast_pdxs]
 exprs_data.not_log<-exp(exprs_data)
@@ -22,8 +24,9 @@ breast_metadata<-metadata[breast_pdxs,]
 PDX_exprs<-readRDS('../Data/pdxMorag_rnaseq.rda')
 metadata<-pData(PDX_exprs)
 
-
-plot_results<-function(deconvolution_df,deconvolution_method){
+plot_results<-function(deconvolution_df,deconvolution_method,results_dir,xlab="Passage no."){
+  all_cell_plots<-list()
+  
   for (cell in unique(deconvolution_df$cell.type)){
     cell_data<-deconvolution_df[deconvolution_df$cell.type==cell,]
     cell_data$passage<-as.factor(cell_data$passage)
@@ -35,23 +38,19 @@ plot_results<-function(deconvolution_df,deconvolution_method){
       #geom_violin() +
       #scale_color_brewer(palette="Paired")+
      # theme_minimal() + ggtitle(paste0(deconvolution_method,": ",cell))
-    ggboxplot(cell_data, x = "passage", y = "Proportion", 
-              ylab = "Cell Proportion", xlab = "Passage no.")
+    p<-ggboxplot(cell_data, x = "passage", y = "Proportion", 
+              ylab = "Cell Proportion", xlab =xlab,title=cell)+ font("title",size=8) 
     
-    mainDir<-paste0("../Results/",deconvolution_method)
-    dir.create(mainDir, showWarnings = FALSE)
-    print(cell)
-    if(grepl( "/",cell, fixed = TRUE)){
-      cell<-str_replace_all(cell,"/","+")
-    }
-    ggsave(paste0(mainDir,"/",cell,"_boxplot.pdf"), width = 4, height = 4)
-    
+    all_cell_plots[[cell]]<-p
   }
+  ml <- marrangeGrob(all_cell_plots, nrow=2, ncol=2, top=deconvolution_method)
+  
+  
+  mainDir<-paste0(results_dir,"/",deconvolution_method)
+  dir.create(mainDir, showWarnings = FALSE)
+  ggsave(paste0(mainDir,"/",deconvolution_method,"_Full_boxplot.pdf"),plot=ml, width = 4, height = 4)
+    
 }
-
-ggboxplot(cell_data, x = "passage", y = "Proportion", 
-          ylab = "Cell Proportion", xlab = "Passage no.")
-
 wilcox_test<-function(cell_data,combination){
   i<-combination[1]
   j<-combination[2]
@@ -78,7 +77,8 @@ wilcox_test_results<-function(deconvolution_df,deconvolution_method,results_dir)
   }
 }
 
-get_results<-function(dat_exprs,pdxs,metadata,method,results_dir){
+get_PDXe_results<-function(dat_exprs,pdxs,metadata,method,results_dir){
+  dir.create(results_dir, showWarnings = FALSE)
   deconvolution<-deconvolute(dat_exprs,method)
   if(method=="mcp_counter"){
     #deconvolution[-1]<-deconvolution[-1]/colSums(deconvolution[-1])
@@ -92,7 +92,6 @@ get_results<-function(dat_exprs,pdxs,metadata,method,results_dir){
   
   print("Plotting results")
   plot_results(breast_deconvolution.df,method,results_dir)
-  print("Getting wilcox tests for passages")
   #wilcox_test_results(breast_deconvolution.df,method)
   
   #return(breast_deconvolution.df)
@@ -122,19 +121,19 @@ plot_cellline_results<-function(deconvolution_df,deconvolution_method){
 }
 
 
-deconvolution<-deconvolute(exprs_data.not_log,"mcp_counter") #Proportion of total immune cells (not including tumour/endothelial tissue), sums to 1
-deconvolution<-colSums(deconvolute(exprs_data.not_log,"mcp_counter")[-1]) #Raw count
-colSums(deconvolute(exprs_data.not_log,"xcell")[-1]) #Proportion not including uncharacterized (sums to less than 1)
-colSums(deconvolute(exprs_data.not_log,"quantiseq")[-1]) #Proportion including uncharacterized
-colSums(deconvolute(exprs_data.not_log,"epic")[-1]) #Proportion including uncharacterized
-deconvolution<-deconvolute(exprs_data.not_log,"cibersort_abs") #Proportion not including uncharacterized (sums to less than 1)
+#deconvolution<-deconvolute(exprs_data.not_log,"mcp_counter") #Proportion of total immune cells (not including tumour/endothelial tissue), sums to 1
+#deconvolution<-colSums(deconvolute(exprs_data.not_log,"mcp_counter")[-1]) #Raw count
+#colSums(deconvolute(exprs_data.not_log,"xcell")[-1]) #Proportion not including uncharacterized (sums to less than 1)
+#colSums(deconvolute(exprs_data.not_log,"quantiseq")[-1]) #Proportion including uncharacterized
+#colSums(deconvolute(exprs_data.not_log,"epic")[-1]) #Proportion including uncharacterized
+#deconvolution<-deconvolute(exprs_data.not_log,"cibersort_abs") #Proportion not including uncharacterized (sums to less than 1)
 
-get_results(exprs_data.not_log,breast_pdxs,breast_metadata,"cibersort","../Results/PDXe")
-get_results(exprs_data.not_log,breast_pdxs,breast_metadata,"cibersort_abs","../Results/PDXe")
-get_results(exprs_data.not_log,breast_pdxs,breast_metadata,"xcell","../Results/PDXe")
-get_results(exprs_data.not_log,breast_pdxs,breast_metadata,"quantiseq","../Results/PDXe")
-get_results(exprs_data.not_log,breast_pdxs,breast_metadata,"mcp_counter","../Results/PDXe") #Convert to percentages
-get_results(exprs_data.not_log,breast_pdxs,breast_metadata,"epic","../Results/PDXe")
+get_PDXe_results(exprs_data.not_log,breast_pdxs,breast_metadata,"cibersort","../Results/PDXe")
+get_PDXe_results(exprs_data.not_log,breast_pdxs,breast_metadata,"cibersort_abs","../Results/PDXe")
+get_PDXe_results(exprs_data.not_log,breast_pdxs,breast_metadata,"xcell","../Results/PDXe")
+get_PDXe_results(exprs_data.not_log,breast_pdxs,breast_metadata,"quantiseq","../Results/PDXe")
+get_PDXe_results(exprs_data.not_log,breast_pdxs,breast_metadata,"mcp_counter","../Results/PDXe") #Convert to percentages
+get_PDXe_results(exprs_data.not_log,breast_pdxs,breast_metadata,"epic","../Results/PDXe")
 
 
 ccle<-readRDS(paste0(pset_folder,"/CCLE.rds"))
