@@ -17,16 +17,26 @@ library(ComplexHeatmap)
 set_cibersort_binary("G:/UHN/CIBERSORT/CIBERSORT.R")
 set_cibersort_mat("G:/UHN/CIBERSORT/LM22.txt")
 pset_folder<-"G:/UHN/psets"
+fpkmToTpm <- function(fpkm)
+{
+  return(exp(log(fpkm) - log(sum(fpkm)) + log(1e6)))
+}
 
-PDX_exprs<-readRDS('../Data/PDXE_microArray.rds')
-metadata<-pData(PDX_exprs)
-tissue.types<-rownames(table(metadata$tumor.type)[table(metadata$tumor.type)>15])
-full_pdxs<-metadata[metadata$tumor.type %in% tissue.types,]$biobase.id
+fpkmToTpm_matrix <- function(fpkm_matrix) {
+  fpkm_matrix_new <- apply(fpkm_matrix, 2, fpkmToTpm)  
+  return(fpkm_matrix_new)
+}
 
-breast_pdxs<-metadata[metadata$tumor.type=="breast",]$biobase.id
-exprs_data<-exprs(PDX_exprs)
+PDXe<-readRDS("../Data/PDXe_RNASeq_FPKM.rds")
+metadata<-pData(PDXe)
+tissue.types<-rownames(table(metadata$tissue)[table(metadata$tissue)>15])
+full_pdxs<-metadata[metadata$tissue %in% tissue.types,]$biobase.id
+exprs_data<-exprs(PDXe)
+exprs_data.not_log<-2**exprs_data
+exprs_data.not_log.tpm<-fpkmToTpm_matrix(exprs_data.not_log)
+breast_pdxs<-metadata[metadata$tissue=="BRCA",]$biobase.id
 
-breast_exprs_data<-exprs_data[,breast_pdxs]
+breast_exprs_data<-exprs_data.not_log.tpm[,breast_pdxs]
 gene_vars<-rowVars(breast_exprs_data)
 all_genes<-rownames(breast_exprs_data)
 variance_data<-data.frame(cbind(all_genes,gene_vars,c(1:length(all_genes))))

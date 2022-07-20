@@ -127,7 +127,7 @@ create_Seurat_object <- function(exp_mat, ann, type = NULL) {
                                 reduction = 'pca',
                                 n.neighbors = global$umap_n_neighbors,
                                 min.dist =  global$umap_min_dist,
-                                metric = global$distance_metric, verbose=F)
+                                metric = global$distance_metric, verbose=T)
   
   return(seu_obj)
 }

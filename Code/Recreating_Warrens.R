@@ -1,46 +1,55 @@
 library(here)
 library(magrittr)
 library(tidyverse)
-library(PharmacoGx)
 library(reticulate)
+library(SummarizedExperiment)
 conda_list()
-use_condaenv(condaenv = 'base', required = TRUE)
+use_condaenv(condaenv = 'Xeva_Analysis', required = TRUE)
 library(Seurat)
 source('analysis_helpers.R')
 source('global_params.R')
 source('Celligner_helpers.R')
 source('Celligner_methods.R')
+#plan("multiprocess", workers = 5)
 
+#pset_folder<-"../Data"
+pset_folder<-"G:/UHN/psets"
 
-pset_folder<-"../Data"
 TCGA_tissue_data<-read.csv("../Data/TCGA_experiment_data.csv")
 rownames(TCGA_tissue_data)<-TCGA_tissue_data$TCGA.studyid
 studies<-na.omit(TCGA_tissue_data$TCGA.studyid)
+studies<-c("UCS","SKCM","PRAD","LUAD","OV","BRCA")
 
 exprs_mats<-list()
 TCGA_tissues<-c()
+#gene_order<-readRDS(paste0(pset_folder,"/TCGA/",studies[1],"/RNASeq.rds"))[,1]
 gene_order<-readRDS(paste0(pset_folder,"/TCGA/",studies[1],".rds"))[,1]
+
 for (study in studies){
-  tissue_type<-study
-  exprs_mat<-readRDS(paste0(pset_folder,"/TCGA/",study,"/RNASeq.rds"))
-  rownames(exprs_mat)<-exprs_mat[,1]
-  exprs_mat<-exprs_mat[,-1]
-  exprs_mat<-exprs_mat[gene_order,]
-  
-  #TCGA_clinical_data<-readRDS(paste0(pset_folder,"/TCGA/",study,"_clinicalMatrix.rds"))
-  
-  exprs_mats[[study]]<-exprs_mat
-  print(study)
-  TCGA_tissues<-c(TCGA_tissues,
-                  rep(TCGA_tissue_data[study,"CCLE.tissueid"],
-                                   ncol(exprs_mat)))
-}
+    tissue_type<-study
+    #if(file.exists(paste0(pset_folder,"/TCGA/",study,"/RNASeq.rds"))){
+    if(file.exists(paste0(pset_folder,"/TCGA/",study,".rds"))){
+    #exprs_mat<-readRDS(paste0(pset_folder,"/TCGA/",study,"/RNASeq.rds"))
+    exprs_mat<-readRDS(paste0(pset_folder,"/TCGA/",study,".rds"))
+    rownames(exprs_mat)<-exprs_mat[,1]
+    exprs_mat<-exprs_mat[,-1]
+    exprs_mat<-exprs_mat[gene_order,]
+    
+    #TCGA_clinical_data<-readRDS(paste0(pset_folder,"/TCGA/",study,"_clinicalMatrix.rds"))
+    
+    exprs_mats[[study]]<-exprs_mat
+    print(study)
+    TCGA_tissues<-c(TCGA_tissues,
+                    rep(TCGA_tissue_data[study,"CCLE.tissueid"],
+                                     ncol(exprs_mat)))
+    }
+  }
 
 TCGA_mat<-do.call(cbind,exprs_mats)
 
 
 
-CCLE.exprs<-readRDS('../Data/CCLE_expression.rds')
+CCLE.exprs<-readRDS('../Data/CCLE_expression.RDS')
 gene_metadata<-CCLE.exprs@elementMetadata
 rownames(gene_metadata)<-gene_metadata$gene_id
 CCLE_mat<-assay(CCLE.exprs)
@@ -161,18 +170,24 @@ saveRDS(comb_obj,"../Results/Comb_seurat_obj.rds")
 alignment<-comb_obj[["umap"]]@cell.embeddings
 alignment.df<-data.frame(cbind(alignment[comb_ann$sampleID,],comb_ann))
 #alignment.df$type<-as.factor(alignment.df$type)
+pdf(file = "../Results/UMAP_embeddings.pdf",   # The directory you want to save the file in
+    width = 8, # The width of the plot in inches
+    height = 8)
+
 ggplot2::ggplot(data=alignment.df, 
                 ggplot2::aes(UMAP_1,UMAP_2,color=factor(type),shape=factor(type)))+
   ggplot2::geom_point(pch=21, alpha=0.7)  +
-  ggplot2::scale_color_manual(values=c(`CL`='black', `tumor`='white')) +
-  ggplot2::scale_size_manual(values=c(`CL`=1, `tumor`=0.75)) +
+  #ggplot2::scale_color_manual(values=c(`CL`='black', `tumor`='white')) +
+  #ggplot2::scale_size_manual(values=c(`CL`=1, `tumor`=0.75)) +
   ggplot2::theme_classic() + 
   ggplot2::theme(legend.position = 'bottom', 
                  text=ggplot2::element_text(size=8),
-                 legend.margin =ggplot2::margin(0,0,0,0)) +
+                legend.margin =ggplot2::margin(0,0,0,0)) +
   ggplot2::guides(fill=FALSE, color=FALSE) +
   ggplot2::scale_fill_manual(values=tissue_colors) +
   ggplot2::xlab("UMAP 1") +
   ggplot2::ylab("UMAP 2")
+dev.off()
+
   
   
