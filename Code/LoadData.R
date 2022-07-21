@@ -124,7 +124,8 @@ indices<-variance_data$V3
 PDXe.exprs<-PDXe.exprs[as.numeric(indices),]
 
 #####TCGA##########
-TCGA<-readRDS(paste0(pset_folder,"/TCGA/BRCA.rds"))
+rawdata_folder<-"G:/UHN/RawData"
+TCGA<-readRDS(paste0(pset_folder,"/TCGA/GDCData/BRCA.rds"))
 rownames(TCGA)<-TCGA[,1]
 TCGA.exprs<-2**TCGA[,-1]-1
 gene_vars<-rowVars(TCGA.exprs)
