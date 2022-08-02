@@ -22,9 +22,9 @@ fpkmToTpm_matrix <- function(fpkm_matrix) {
   return(fpkm_matrix_new)
 }
 
-set_cibersort_binary("G:/UHN/CIBERSORT/CIBERSORT.R")
-set_cibersort_mat("G:/UHN/CIBERSORT/LM22.txt")
-pset_folder<-"G:/UHN/psets"
+#set_cibersort_binary("G:/UHN/CIBERSORT/CIBERSORT.R")
+#set_cibersort_mat("G:/UHN/CIBERSORT/LM22.txt")
+pset_folder<-"C:/Users/nicho/Documents/UHN/psets"
 CCLE<-readRDS(paste0(pset_folder,"/CCLE.rds"))
 CCLE.breast.cells<-rownames(CCLE@cell[CCLE@cell$tissueid=="Breast",])
 CCLE<-subsetTo(CCLE,cells=CCLE.breast.cells)
